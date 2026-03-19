@@ -20,7 +20,7 @@ import { extractFeatures, StabilityTracker } from '../core/biomechanics';
 // ── Configuration ─────────────────────────────────────────────────────────────
 
 const VISION_WASM_URL =
-  'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm';
+  'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm';
 const MODEL_URL =
   'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/latest/pose_landmarker_lite.task';
 
@@ -61,6 +61,7 @@ export function usePoseEstimation(): PoseEstimationState {
   // FPS tracking: circular buffer of frame timestamps
   const frameTimesRef = useRef<number[]>([]);
   const lastTimestampRef = useRef<number>(0);
+  const lastRoundedFpsRef = useRef<number>(0);
 
   // ── Initialize PoseLandmarker on mount ────────────────────────────────────
   useEffect(() => {
@@ -72,14 +73,29 @@ export function usePoseEstimation(): PoseEstimationState {
 
         if (cancelled) return;
 
-        const landmarker = await PoseLandmarker.createFromOptions(vision, {
-          baseOptions: {
-            modelAssetPath: MODEL_URL,
-            delegate: 'GPU',
-          },
-          runningMode: 'VIDEO',
-          numPoses: 1,
-        });
+        let landmarker: PoseLandmarker;
+
+        // Try GPU first, fall back to CPU if GPU delegate fails
+        try {
+          landmarker = await PoseLandmarker.createFromOptions(vision, {
+            baseOptions: {
+              modelAssetPath: MODEL_URL,
+              delegate: 'GPU',
+            },
+            runningMode: 'VIDEO',
+            numPoses: 1,
+          });
+        } catch {
+          // GPU delegate unavailable — fall back to CPU
+          landmarker = await PoseLandmarker.createFromOptions(vision, {
+            baseOptions: {
+              modelAssetPath: MODEL_URL,
+              delegate: 'CPU',
+            },
+            runningMode: 'VIDEO',
+            numPoses: 1,
+          });
+        }
 
         if (cancelled) {
           landmarker.close();
@@ -163,7 +179,12 @@ export function usePoseEstimation(): PoseEstimationState {
       const elapsed = frameTimes[frameTimes.length - 1] - frameTimes[0];
       const computedFps =
         elapsed > 0 ? ((frameTimes.length - 1) / elapsed) * 1000 : 0;
-      setFps(Math.round(computedFps));
+      // Only update state when the rounded value changes to avoid unnecessary re-renders
+      const rounded = Math.round(computedFps);
+      if (rounded !== lastRoundedFpsRef.current) {
+        lastRoundedFpsRef.current = rounded;
+        setFps(rounded);
+      }
     }
   }, []);
 

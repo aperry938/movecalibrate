@@ -6,7 +6,7 @@
  * countdown -> perform -> scoring -> result, using CameraView + rep hooks.
  */
 
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import type {
   BiomechanicalFeatures,
   Landmark,
@@ -17,7 +17,6 @@ import type {
 } from './core/types';
 import { getExerciseById } from './core/exerciseProfiles';
 import { computeQualityScore, getDeviations, checkCompensations } from './core/qualityScoring';
-import { computeOutcome, computePoints, computeCalibrationGap } from './core/calibrationEngine';
 import { useRepFlow } from './hooks/useRepFlow';
 import { useAdaptiveSession } from './hooks/useAdaptiveSession';
 
@@ -53,14 +52,6 @@ export default function App() {
   const [liveDeviations, setLiveDeviations] = useState<Deviation[]>([]);
   const [liveCompensations, setLiveCompensations] = useState<string[]>([]);
 
-  // Quality samples collected during a rep
-  const qualitySamplesRef = useRef<number[]>([]);
-  const deviationSamplesRef = useRef<Deviation[][]>([]);
-  const compensationSamplesRef = useRef<string[][]>([]);
-
-  // Session timer
-  const sessionStartRef = useRef<number>(0);
-
   // Adaptive session hook
   const {
     isActive: _sessionIsActive,
@@ -86,7 +77,7 @@ export default function App() {
     countdown,
     holdTimer,
     holdDuration,
-    repResult: _repResult,
+    repResult,
     startPreview,
     setConfidence,
     addQualitySample,
@@ -109,87 +100,57 @@ export default function App() {
       setLiveDeviations(deviations);
       setLiveCompensations(compensations);
 
-      // Collect samples
-      qualitySamplesRef.current.push(quality);
-      deviationSamplesRef.current.push(deviations);
-      compensationSamplesRef.current.push(compensations);
-
       // Feed into rep flow
       addQualitySample(features);
     },
     [flowState, currentExercise, currentDifficulty, addQualitySample],
   );
 
-  // Watch for hold completion -- transition from perform to scoring
+  // Auto-complete the hold when timer reaches duration
   useEffect(() => {
-    if (flowState === 'scoring' && currentExercise) {
-      // Compute final rep result from collected samples
-      const samples = qualitySamplesRef.current;
-      const avgQuality =
-        samples.length > 0
-          ? samples.reduce((a, b) => a + b, 0) / samples.length
-          : 0;
+    if (flowState === 'perform' && holdTimer >= holdDuration) {
+      completeHold();
+    }
+  }, [flowState, holdTimer, holdDuration, completeHold]);
 
-      // Aggregate compensations (any that appeared in any frame)
-      const allComps = new Set<string>();
-      for (const frameComps of compensationSamplesRef.current) {
-        for (const c of frameComps) allComps.add(c);
-      }
-      const detectedComps = Array.from(allComps);
-
-      // Get final deviations from last sample
-      const finalDeviations =
-        deviationSamplesRef.current.length > 0
-          ? deviationSamplesRef.current[deviationSamplesRef.current.length - 1]
-          : [];
-
-      // We need the confidence from the rep flow -- use repResult if available
-      // Since scoring just started, repResult may not be set yet.
-      // The confidence was set earlier in the flow. We store it via ref.
-      const confidence = confidenceRef.current;
-      const outcome = computeOutcome(confidence, avgQuality);
-      const points = computePoints(outcome);
-      const gap = computeCalibrationGap(confidence, avgQuality);
-
+  // React to repResult from useRepFlow becoming non-null (scoring complete)
+  useEffect(() => {
+    if (repResult && flowState === 'result') {
       const result: RepResultData = {
-        confidence,
-        qualityScore: avgQuality,
-        outcome,
-        points,
-        calibrationGap: gap,
-        deviations: finalDeviations,
-        compensationsDetected: detectedComps,
+        confidence: repResult.confidence,
+        qualityScore: repResult.qualityScore,
+        outcome: repResult.outcome,
+        points: repResult.points,
+        calibrationGap: repResult.calibrationGap,
+        deviations: repResult.deviations,
+        compensationsDetected: repResult.compensationsDetected,
       };
 
       setLastRepResult(result);
 
       // Report to adaptive session
-      completeRep(outcome, avgQuality, confidence, gap, detectedComps, points);
-
-      // Transition rep flow to result
-      completeHold();
+      completeRep(
+        repResult.outcome,
+        repResult.qualityScore,
+        repResult.confidence,
+        repResult.calibrationGap,
+        repResult.compensationsDetected,
+        repResult.points,
+      );
     }
-  }, [flowState, currentExercise, completeRep, completeHold]);
-
-  // Store confidence for scoring phase
-  const confidenceRef = useRef<ConfidenceRating>('confident');
+  }, [repResult, flowState, completeRep]);
 
   // ── View Handlers ─────────────────────────────────────────────────────────
 
   function handleStartSession() {
     startSession();
-    sessionStartRef.current = Date.now();
     setView('session');
     // Start the first exercise
     startPreview();
   }
 
   function handleConfidence(rating: ConfidenceRating) {
-    confidenceRef.current = rating;
-    // Reset sample collectors
-    qualitySamplesRef.current = [];
-    deviationSamplesRef.current = [];
-    compensationSamplesRef.current = [];
+    // Reset live display state
     setLiveQuality(0);
     setLiveDeviations([]);
     setLiveCompensations([]);
@@ -214,14 +175,8 @@ export default function App() {
   }
 
   function handleBeginExercise() {
-    // Transition from preview to confidence
-    setConfidence('confident'); // This triggers the flow -- but we actually want confidence input first
-    // Actually, startPreview already moves to 'preview'. The user sees ExerciseGuide.
-    // When they click "Begin", we need to move to confidence input phase.
-    // The rep flow state machine: idle -> preview -> confidence -> countdown -> perform -> scoring -> result
-    // startPreview() moves to 'preview'. We need to move to 'confidence'.
-    // Looking at the hook API: setConfidence moves to countdown. We need an intermediate step.
-    // Let's handle this with a local state overlay.
+    // Show the confidence input UI. The user selects their confidence rating
+    // which then triggers the countdown via handleConfidenceSelect -> setConfidence.
     setShowConfidenceInput(true);
   }
 

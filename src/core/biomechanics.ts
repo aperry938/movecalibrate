@@ -208,8 +208,8 @@ export function computeSegmentRatios(landmarks: Landmark[]): number[] {
   const lArm = euclideanDistance(pt2d(landmarks, L_SHOULDER), pt2d(landmarks, L_WRIST));
   const rArm = euclideanDistance(pt2d(landmarks, R_SHOULDER), pt2d(landmarks, R_WRIST));
   const avgArm = (lArm + rArm) / 2.0;
-  // 0 = perfect symmetry raw. Invert so 1 = symmetric.
-  ratios[1] = 1.0 - clamp(Math.abs(lArm - rArm) / (avgArm + 1e-8), 0.0, 1.0);
+  // 0 = perfect symmetry (low = good). Raw magnitude: higher = more asymmetric.
+  ratios[1] = clamp(Math.abs(lArm - rArm) / (avgArm + 1e-8), 0.0, 1.0);
 
   // Stance width / hip width
   const hipWidth = euclideanDistance(pt2d(landmarks, L_HIP), pt2d(landmarks, R_HIP));
@@ -219,8 +219,8 @@ export function computeSegmentRatios(landmarks: Landmark[]): number[] {
   // Shoulder-hip alignment offset (frontal plane)
   // Horizontal offset between shoulder midpoint and hip midpoint
   const offset = Math.abs(shMid.x - hpMid.x);
-  // Normalize by hip width. 1 = perfectly stacked.
-  ratios[3] = 1.0 - clamp(offset / (hipWidth + 1e-8), 0.0, 1.0);
+  // Normalize by hip width. 0 = perfectly stacked (low = good). Raw magnitude: higher = more offset.
+  ratios[3] = clamp(offset / (hipWidth + 1e-8), 0.0, 1.0);
 
   // Center of Mass (CoM) horizontal displacement from Base of Support (BoS) center
   // Approximate CoM as weighted average of major segments:
@@ -238,13 +238,14 @@ export function computeSegmentRatios(landmarks: Landmark[]): number[] {
   const comDispX = Math.abs(comX - bosCenter.x);
   // Normalize by body height (shoulder-ankle distance) for pose-invariance
   const bodyHeight = euclideanDistance(shMid, anMid) + 1e-8;
-  ratios[4] = 1.0 - clamp(comDispX / (bodyHeight * 0.3), 0.0, 1.0);
+  // 0 = centered (low = good). Raw magnitude: higher = more displaced.
+  ratios[4] = clamp(comDispX / (bodyHeight * 0.3), 0.0, 1.0);
 
   // Head-spine alignment: offset of nose from shoulder midpoint
   const nose = pt2d(landmarks, NOSE);
   const headOffset = euclideanDistance(nose, shMid);
-  // Normalize by torso length. 1 = perfectly aligned.
-  ratios[5] = 1.0 - clamp(headOffset / (torsoLen + 1e-8), 0.0, 1.0);
+  // Normalize by torso length. 0 = perfectly aligned (low = good). Raw magnitude: higher = more misaligned.
+  ratios[5] = clamp(headOffset / (torsoLen + 1e-8), 0.0, 1.0);
 
   return ratios;
 }
@@ -376,8 +377,8 @@ export class StabilityTracker {
       // Variance of frame-to-frame velocities
       const mean = velocities.reduce((s, v) => s + v, 0) / velocities.length;
       const velVar = velocities.reduce((s, v) => s + (v - mean) * (v - mean), 0) / velocities.length;
-      // Low variance = stable. Normalize: typical variance range [0, 0.005]
-      stability[0] = 1.0 - clamp(velVar / 0.005, 0.0, 1.0);
+      // 0 = steady (low = good). Raw magnitude: higher = more shaky.
+      stability[0] = clamp(velVar / 0.005, 0.0, 1.0);
     } else {
       stability[0] = 0.5; // Neutral until enough history
     }
@@ -402,8 +403,8 @@ export class StabilityTracker {
         sumSqDist += dx * dx + dy * dy;
       }
       const oscillation = Math.sqrt(sumSqDist / this.comHistory.length);
-      // Low oscillation = stable. Normalize: typical range [0, 0.03]
-      stability[1] = 1.0 - clamp(oscillation / 0.03, 0.0, 1.0);
+      // 0 = stable (low = good). Raw magnitude: higher = more sway.
+      stability[1] = clamp(oscillation / 0.03, 0.0, 1.0);
     } else {
       stability[1] = 0.5;
     }
@@ -437,8 +438,8 @@ export class StabilityTracker {
 
     const comX = 0.2 * shMid.x + 0.4 * hpMid.x + 0.2 * knMid.x + 0.2 * anMid.x;
     const offsetRatio = Math.abs(comX - bosCenterX) / bosWidth;
-    // 0 offset = perfectly centered = 1.0
-    stability[3] = 1.0 - clamp(offsetRatio, 0.0, 1.0);
+    // 0 = perfectly centered (low = good). Raw magnitude: higher = more asymmetric.
+    stability[3] = clamp(offsetRatio, 0.0, 1.0);
 
     return stability;
   }

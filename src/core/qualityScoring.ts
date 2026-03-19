@@ -83,7 +83,7 @@ export function computeQualityScore(
       const effectiveWidth = rangeWidth > 0 ? rangeWidth : 0.01;
       const nearestBound = actual < idealMin ? idealMin : idealMax;
       const distance = Math.abs(actual - nearestBound);
-      const penalty = (distance / effectiveWidth) * 200;
+      const penalty = (distance / effectiveWidth) * 100;
       scores.push(Math.max(0, 100 - penalty));
     }
   }
@@ -168,6 +168,8 @@ export function checkCompensations(
   const detected: string[] = [];
 
   for (const rule of profile.compensationRules) {
+    if (rule.featureChecks.length === 0) continue;
+
     let allMet = true;
 
     for (const check of rule.featureChecks) {

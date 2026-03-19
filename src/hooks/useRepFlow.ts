@@ -97,6 +97,7 @@ export function useRepFlow(
   const confidenceRef = useRef<ConfidenceRating>('unsure');
   const qualitySamplesRef = useRef<number[]>([]);
   const compensationSamplesRef = useRef<string[][]>([]);
+  const lastFeaturesRef = useRef<BiomechanicalFeatures>(new Float64Array(30) as BiomechanicalFeatures);
   const holdStartRef = useRef<number>(0);
   const countdownTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const holdTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -176,6 +177,9 @@ export function useRepFlow(
     (features: BiomechanicalFeatures) => {
       if (flowState !== 'perform' || !exercise) return;
 
+      // Store the latest features for deviation analysis in completeHold
+      lastFeaturesRef.current = features;
+
       // Compute quality score for this frame
       const frameQuality = computeQualityScore(features, exercise, difficultyLevel);
       qualitySamplesRef.current.push(frameQuality);
@@ -224,20 +228,8 @@ export function useRepFlow(
     const points = computePoints(outcome);
     const calibrationGap = computeCalibrationGap(confidence, finalQuality);
 
-    // Get deviations from the last sample (most representative of end-of-hold form)
-    // If no features available, use an empty Float64Array
-    const lastFeatures =
-      samples.length > 0
-        ? (() => {
-            // Re-extract from stored quality -- we need the actual features
-            // for deviation analysis. Since we only stored scores, compute
-            // deviations using a synthetic features array at the median quality.
-            // In practice, the caller should check deviations at scoring time.
-            return new Float64Array(30);
-          })()
-        : new Float64Array(30);
-
-    const deviations = getDeviations(lastFeatures, exercise, difficultyLevel);
+    // Get deviations from the last frame's actual features (stored in ref during addQualitySample)
+    const deviations = getDeviations(lastFeaturesRef.current, exercise, difficultyLevel);
 
     // Aggregate compensations: find any compensation that appeared in >25% of samples
     const compensationCounts = new Map<string, number>();

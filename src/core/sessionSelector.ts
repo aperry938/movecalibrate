@@ -12,9 +12,7 @@ import { getPriorityMultiplier } from './compensationDetector';
 const DEFAULT_SESSION_SIZE = 8;
 
 /** Pool allocation ratios. */
-const WEAK_RATIO = 0.6;
 const NEW_RATIO = 0.3;
-// REVIEW gets the remainder
 
 /**
  * Build a composite key for mastery record lookup.
@@ -64,7 +62,7 @@ function weightedSelect<T extends { weight: number }>(
     }
 
     let roll = Math.random() * totalWeight;
-    let chosenIdx = 0;
+    let chosenIdx = remaining.length - 1;  // default to last if float imprecision
 
     for (let j = 0; j < remaining.length; j++) {
       roll -= remaining[j].weight;
@@ -181,10 +179,10 @@ export function selectExercises(
     }
   }
 
-  // Target counts per pool
-  const weakTarget = Math.ceil(sessionSize * WEAK_RATIO);
-  const newTarget = Math.ceil(sessionSize * NEW_RATIO);
-  const reviewTarget = Math.max(0, sessionSize - weakTarget - newTarget);
+  // Target counts per pool — guarantee at least 1 review slot
+  const reviewTarget = Math.max(1, Math.round(sessionSize * 0.1));
+  const newTarget = Math.round(sessionSize * NEW_RATIO);
+  const weakTarget = sessionSize - reviewTarget - newTarget;
 
   // Select from each pool
   const weakSelected = weightedSelect(weakPool, weakTarget);

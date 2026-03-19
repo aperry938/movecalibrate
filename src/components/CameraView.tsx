@@ -38,6 +38,13 @@ export default function CameraView({
 
   const { landmarks, features, isReady, fps, error: poseError, processFrame } = usePoseEstimation();
 
+  // Use refs for drawing data to avoid recreating the RAF callback every frame
+  const landmarksRef = useRef<Landmark[] | null>(null);
+  const featuresRef = useRef<BiomechanicalFeatures | null>(null);
+
+  useEffect(() => { landmarksRef.current = landmarks; }, [landmarks]);
+  useEffect(() => { featuresRef.current = features; }, [features]);
+
   // Start camera
   useEffect(() => {
     let cancelled = false;
@@ -90,6 +97,11 @@ export default function CameraView({
   const onFrameRef = useRef(onFrame);
   onFrameRef.current = onFrame;
 
+  const showSkeletonRef = useRef(showSkeleton);
+  const showAnglesRef = useRef(showAngles);
+  useEffect(() => { showSkeletonRef.current = showSkeleton; }, [showSkeleton]);
+  useEffect(() => { showAnglesRef.current = showAngles; }, [showAngles]);
+
   const tick = useCallback(() => {
     const video = videoRef.current;
     const canvas = canvasRef.current;
@@ -118,23 +130,26 @@ export default function CameraView({
     // Clear overlay
     clearCanvas(overlayCtx, VIDEO_WIDTH, VIDEO_HEIGHT);
 
-    // Draw skeleton and angles on overlay
-    if (landmarks && landmarks.length > 0) {
-      if (showSkeleton) {
-        drawSkeleton(overlayCtx, landmarks, '#3b82f6', VIDEO_WIDTH, VIDEO_HEIGHT);
+    // Draw skeleton and angles on overlay using refs (avoids RAF restart)
+    const currentLandmarks = landmarksRef.current;
+    const currentFeatures = featuresRef.current;
+
+    if (currentLandmarks && currentLandmarks.length > 0) {
+      if (showSkeletonRef.current) {
+        drawSkeleton(overlayCtx, currentLandmarks, '#3b82f6', VIDEO_WIDTH, VIDEO_HEIGHT);
       }
-      if (showAngles) {
-        drawAngles(overlayCtx, landmarks, VIDEO_WIDTH, VIDEO_HEIGHT);
+      if (showAnglesRef.current) {
+        drawAngles(overlayCtx, currentLandmarks, VIDEO_WIDTH, VIDEO_HEIGHT);
       }
 
       // Forward features to parent
-      if (features && onFrameRef.current) {
-        onFrameRef.current(features, landmarks);
+      if (currentFeatures && onFrameRef.current) {
+        onFrameRef.current(currentFeatures, currentLandmarks);
       }
     }
 
     rafRef.current = requestAnimationFrame(tick);
-  }, [landmarks, features, isReady, processFrame, showSkeleton, showAngles]);
+  }, [isReady, processFrame]);
 
   // Animation loop control
   useEffect(() => {

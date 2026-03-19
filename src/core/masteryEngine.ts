@@ -105,10 +105,10 @@ export function updateMastery(
  * an ISO 8601 date string.
  */
 export function getNextReview(record: MasteryRecord): string {
+  const base = new Date(record.lastPerformed);
   const intervalDays = MASTERY_INTERVALS[record.masteryLevel] ?? 0;
-  const next = new Date();
-  next.setDate(next.getDate() + intervalDays);
-  return next.toISOString();
+  base.setDate(base.getDate() + intervalDays);
+  return base.toISOString().split('T')[0];
 }
 
 /**

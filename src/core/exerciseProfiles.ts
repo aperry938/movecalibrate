@@ -231,9 +231,9 @@ const KNEE_FLEXION: ExerciseProfile = {
   ],
   compensationRules: [
     {
-      name: 'Hip flexion compensation',
+      name: 'L hip flexion compensation',
       description:
-        'Flexing the hip forward to bring the heel closer instead of using pure knee flexion',
+        'Flexing the left hip forward to bring the heel closer instead of using pure knee flexion',
       featureChecks: [
         {
           featureIndex: FeatureIndex.L_HIP_FLEXION,
@@ -243,9 +243,9 @@ const KNEE_FLEXION: ExerciseProfile = {
       ],
     },
     {
-      name: 'Hip flexion compensation',
+      name: 'R hip flexion compensation',
       description:
-        'Flexing the hip forward to bring the heel closer instead of using pure knee flexion',
+        'Flexing the right hip forward to bring the heel closer instead of using pure knee flexion',
       featureChecks: [
         {
           featureIndex: FeatureIndex.R_HIP_FLEXION,
@@ -293,7 +293,7 @@ const MINI_SQUAT: ExerciseProfile = {
         [FeatureIndex.R_KNEE_FLEXION]: [0.15, 0.25],
         [FeatureIndex.KNEE_SYMMETRY]: [0.85, 1.0],
         [FeatureIndex.TRUNK_FORWARD_LEAN]: [0.0, 0.08],
-        [FeatureIndex.WEIGHT_DISTRIBUTION]: [0.40, 0.60],
+        [FeatureIndex.WEIGHT_DISTRIBUTION]: [0.0, 0.15],
       },
       holdDuration: 3,
     },
@@ -305,7 +305,7 @@ const MINI_SQUAT: ExerciseProfile = {
         [FeatureIndex.R_KNEE_FLEXION]: [0.30, 0.45],
         [FeatureIndex.KNEE_SYMMETRY]: [0.85, 1.0],
         [FeatureIndex.TRUNK_FORWARD_LEAN]: [0.0, 0.10],
-        [FeatureIndex.WEIGHT_DISTRIBUTION]: [0.40, 0.60],
+        [FeatureIndex.WEIGHT_DISTRIBUTION]: [0.0, 0.15],
       },
       holdDuration: 5,
     },
@@ -317,7 +317,7 @@ const MINI_SQUAT: ExerciseProfile = {
         [FeatureIndex.R_KNEE_FLEXION]: [0.50, 0.65],
         [FeatureIndex.KNEE_SYMMETRY]: [0.80, 1.0],
         [FeatureIndex.TRUNK_FORWARD_LEAN]: [0.0, 0.15],
-        [FeatureIndex.WEIGHT_DISTRIBUTION]: [0.40, 0.60],
+        [FeatureIndex.WEIGHT_DISTRIBUTION]: [0.0, 0.20],
       },
       holdDuration: 5,
     },
@@ -329,7 +329,7 @@ const MINI_SQUAT: ExerciseProfile = {
         [FeatureIndex.R_KNEE_FLEXION]: [0.65, 0.80],
         [FeatureIndex.KNEE_SYMMETRY]: [0.80, 1.0],
         [FeatureIndex.TRUNK_FORWARD_LEAN]: [0.0, 0.18],
-        [FeatureIndex.WEIGHT_DISTRIBUTION]: [0.40, 0.60],
+        [FeatureIndex.WEIGHT_DISTRIBUTION]: [0.0, 0.20],
       },
       holdDuration: 5,
     },
@@ -365,12 +365,24 @@ const MINI_SQUAT: ExerciseProfile = {
       ],
     },
     {
-      name: 'Valgus collapse',
+      name: 'L valgus collapse',
       description:
-        'Knees caving inward during the squat, indicating weak hip abductors',
+        'Left knee caving inward during the squat, indicating weak left hip abductors',
       featureChecks: [
         {
           featureIndex: FeatureIndex.L_HIP_ABDUCTION,
+          condition: 'below',
+          threshold: 0.10,
+        },
+      ],
+    },
+    {
+      name: 'R valgus collapse',
+      description:
+        'Right knee caving inward during the squat, indicating weak right hip abductors',
+      featureChecks: [
+        {
+          featureIndex: FeatureIndex.R_HIP_ABDUCTION,
           condition: 'below',
           threshold: 0.10,
         },
@@ -400,7 +412,7 @@ const TANDEM_STANCE: ExerciseProfile = {
       idealRanges: {
         [FeatureIndex.COM_BASE_DISPLACEMENT]: [0.0, 0.15],
         [FeatureIndex.LANDMARK_VELOCITY_VAR]: [0.0, 0.15],
-        [FeatureIndex.WEIGHT_DISTRIBUTION]: [0.35, 0.65],
+        [FeatureIndex.WEIGHT_DISTRIBUTION]: [0.0, 0.20],
         [FeatureIndex.STANCE_WIDTH_RATIO]: [0.10, 0.25],
       },
       holdDuration: 10,
@@ -411,7 +423,7 @@ const TANDEM_STANCE: ExerciseProfile = {
       idealRanges: {
         [FeatureIndex.COM_BASE_DISPLACEMENT]: [0.0, 0.12],
         [FeatureIndex.LANDMARK_VELOCITY_VAR]: [0.0, 0.12],
-        [FeatureIndex.WEIGHT_DISTRIBUTION]: [0.38, 0.62],
+        [FeatureIndex.WEIGHT_DISTRIBUTION]: [0.0, 0.15],
         [FeatureIndex.STANCE_WIDTH_RATIO]: [0.05, 0.15],
       },
       holdDuration: 15,
@@ -422,7 +434,7 @@ const TANDEM_STANCE: ExerciseProfile = {
       idealRanges: {
         [FeatureIndex.COM_BASE_DISPLACEMENT]: [0.0, 0.10],
         [FeatureIndex.LANDMARK_VELOCITY_VAR]: [0.0, 0.10],
-        [FeatureIndex.WEIGHT_DISTRIBUTION]: [0.40, 0.60],
+        [FeatureIndex.WEIGHT_DISTRIBUTION]: [0.0, 0.12],
         [FeatureIndex.STANCE_WIDTH_RATIO]: [0.0, 0.08],
       },
       holdDuration: 20,
@@ -433,7 +445,7 @@ const TANDEM_STANCE: ExerciseProfile = {
       idealRanges: {
         [FeatureIndex.COM_BASE_DISPLACEMENT]: [0.0, 0.12],
         [FeatureIndex.LANDMARK_VELOCITY_VAR]: [0.0, 0.15],
-        [FeatureIndex.WEIGHT_DISTRIBUTION]: [0.38, 0.62],
+        [FeatureIndex.WEIGHT_DISTRIBUTION]: [0.0, 0.15],
         [FeatureIndex.STANCE_WIDTH_RATIO]: [0.0, 0.08],
       },
       holdDuration: 15,
@@ -665,12 +677,24 @@ const HEEL_RAISE: ExerciseProfile = {
       ],
     },
     {
-      name: 'Knee hyperextension',
+      name: 'L knee hyperextension',
       description:
-        'Locking the knees into hyperextension during the raise',
+        'Locking the left knee into hyperextension during the raise',
       featureChecks: [
         {
           featureIndex: FeatureIndex.L_KNEE_FLEXION,
+          condition: 'below',
+          threshold: 0.02,
+        },
+      ],
+    },
+    {
+      name: 'R knee hyperextension',
+      description:
+        'Locking the right knee into hyperextension during the raise',
+      featureChecks: [
+        {
+          featureIndex: FeatureIndex.R_KNEE_FLEXION,
           condition: 'below',
           threshold: 0.02,
         },

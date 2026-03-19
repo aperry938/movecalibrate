@@ -59,7 +59,6 @@ export function computePoints(outcome: CalibrationOutcome): number {
 export function computeCalibrationGap(
   confidence: ConfidenceRating,
   qualityScore: number,
-  _threshold = QUALITY_THRESHOLD,
 ): number {
   const confidenceValue = confidence === 'confident' ? 0.8 : 0.3;
   const qualityValue = qualityScore / 100;
@@ -91,10 +90,7 @@ export function computeCalibrationScore(
   let weightedMaxSum = 0;
 
   for (const entry of history) {
-    const entryTime =
-      typeof entry.timestamp === 'number'
-        ? entry.timestamp
-        : new Date(entry.timestamp).getTime();
+    const entryTime = new Date(entry.timestamp).getTime();
 
     const daysSince = (now - entryTime) / msPerDay;
     const decayFactor = Math.pow(0.5, daysSince / decayHalfLifeDays);

@@ -70,11 +70,25 @@ export function updateCompensation(
   }
 
   // Incorrect form — compensation was present
+  const now = new Date().toISOString();
+
+  if (flag.resolved) {
+    // Re-flag: the compensation has recurred after resolution
+    return {
+      ...flag,
+      resolved: false,
+      resolvedDate: null,
+      consecutiveCorrect: 0,
+      occurrences: flag.occurrences + 1,
+      lastOccurrence: now,
+    };
+  }
+
   return {
     ...flag,
     consecutiveCorrect: 0,
     occurrences: flag.occurrences + 1,
-    lastOccurrence: new Date().toISOString(),
+    lastOccurrence: now,
   };
 }
 
