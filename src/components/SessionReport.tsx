@@ -32,6 +32,27 @@ export default function SessionReport({
 }: SessionReportProps) {
   const totalOutcomes =
     record.outcomes.CC + record.outcomes.UC + record.outcomes.UI + record.outcomes.CI;
+
+  if (totalOutcomes === 0) {
+    return (
+      <div className="w-full max-w-md mx-auto space-y-4">
+        <div className="bg-white rounded-xl border border-slate-200 p-6 text-center">
+          <h2 className="text-lg font-semibold text-slate-700 mb-2">
+            Session ended early
+          </h2>
+          <p className="text-sm text-slate-500">No exercises completed.</p>
+        </div>
+        <button
+          onClick={onClose}
+          className="w-full bg-blue-500 hover:bg-blue-600 active:bg-blue-700 text-white text-sm font-semibold rounded-xl px-4 py-3 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+          type="button"
+        >
+          Back to Dashboard
+        </button>
+      </div>
+    );
+  }
+
   const maxOutcome = Math.max(
     record.outcomes.CC,
     record.outcomes.UC,

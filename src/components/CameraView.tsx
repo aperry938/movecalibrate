@@ -35,6 +35,7 @@ export default function CameraView({
 
   const [cameraReady, setCameraReady] = useState(false);
   const [cameraError, setCameraError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
 
   const { landmarks, features, isReady, fps, error: poseError, processFrame } = usePoseEstimation();
 
@@ -91,7 +92,7 @@ export default function CameraView({
       }
       setCameraReady(false);
     };
-  }, []);
+  }, [retryCount]);
 
   // Frame processing callback
   const onFrameRef = useRef(onFrame);
@@ -220,7 +221,20 @@ export default function CameraView({
         <div className="absolute inset-0 flex items-center justify-center bg-slate-900/90">
           <div className="text-center px-4">
             <p className="text-rose-400 text-sm font-medium mb-1">Camera Error</p>
-            <p className="text-slate-400 text-xs">{errorMessage}</p>
+            <p className="text-slate-400 text-xs mb-2">{errorMessage}</p>
+            <p className="text-slate-400 text-xs mb-3">
+              Camera access is required for movement tracking. Please allow camera permissions and try again.
+            </p>
+            <button
+              type="button"
+              className="bg-blue-500 hover:bg-blue-600 text-white text-sm font-medium rounded-lg px-4 py-2 transition-colors"
+              onClick={() => {
+                setCameraError(null);
+                setRetryCount((c) => c + 1);
+              }}
+            >
+              Try Again
+            </button>
           </div>
         </div>
       )}

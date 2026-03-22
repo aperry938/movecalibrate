@@ -39,6 +39,7 @@ export default function PhysioReport({ onClose }: PhysioReportProps) {
   const [sessions, setSessions] = useState<SessionRecord[]>([]);
   const [masteryMap, setMasteryMap] = useState<Record<string, MasteryRecord>>({});
   const [compFlags, setCompFlags] = useState<Record<string, CompensationFlag[]>>({});
+  const [exportStatus, setExportStatus] = useState<string | null>(null);
   const [readiness, setReadiness] = useState<RecoveryReadiness>({
     overall: 0,
     quality: 0,
@@ -122,6 +123,8 @@ export default function PhysioReport({ onClose }: PhysioReportProps) {
 
   function handleExportJSON() {
     exportSessionsForPhysio();
+    setExportStatus('Data exported successfully');
+    setTimeout(() => setExportStatus(null), 3000);
   }
 
   function handlePrint() {
@@ -136,6 +139,7 @@ export default function PhysioReport({ onClose }: PhysioReportProps) {
           body { background: white !important; }
           .no-print { display: none !important; }
           .print-break { page-break-inside: avoid; }
+          table { page-break-inside: avoid; }
           * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
         }
       `}</style>
@@ -301,6 +305,9 @@ export default function PhysioReport({ onClose }: PhysioReportProps) {
           Back to Dashboard
         </button>
       </div>
+      {exportStatus && (
+        <p className="text-xs text-emerald-600 font-medium mt-2 text-center no-print">{exportStatus}</p>
+      )}
     </div>
   );
 }

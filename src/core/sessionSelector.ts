@@ -218,6 +218,18 @@ export function selectExercises(
   // Shuffle to avoid predictable ordering
   const shuffled = shuffle(selected);
 
+  // Defensive fallback: if all pools were empty, assign first N exercises at difficulty 1
+  if (shuffled.length === 0 && sessionSize > 0) {
+    const fallback: ExerciseAssignment[] = exercises
+      .slice(0, sessionSize)
+      .map((ex) => ({
+        exerciseId: ex.id,
+        difficultyLevel: 1,
+        reason: 'new' as const,
+      }));
+    return fallback;
+  }
+
   // Map to ExerciseAssignment
   return shuffled.map((candidate) => ({
     exerciseId: candidate.exerciseId,

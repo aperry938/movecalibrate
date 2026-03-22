@@ -46,6 +46,7 @@ export default function App() {
   const [view, setView] = useState<AppView>('dashboard');
   const [sessionRecord, setSessionRecord] = useState<SessionRecord | null>(null);
   const [lastRepResult, setLastRepResult] = useState<RepResultData | null>(null);
+  const [showConfidenceInput, setShowConfidenceInput] = useState(false);
 
   // Live quality tracking during perform phase
   const [liveQuality, setLiveQuality] = useState(0);
@@ -160,6 +161,16 @@ export default function App() {
   function handleNextRep() {
     setLastRepResult(null);
 
+    // Guard: if queue is empty, go straight to report
+    if (exerciseQueue.length === 0) {
+      const record = endSession();
+      if (record) {
+        setSessionRecord(record);
+      }
+      setView('report');
+      return;
+    }
+
     // Check if there are more exercises
     if (currentIndex < exerciseQueue.length - 1) {
       nextRep();
@@ -179,8 +190,6 @@ export default function App() {
     // which then triggers the countdown via handleConfidenceSelect -> setConfidence.
     setShowConfidenceInput(true);
   }
-
-  const [showConfidenceInput, setShowConfidenceInput] = useState(false);
 
   function handleConfidenceSelect(rating: ConfidenceRating) {
     setShowConfidenceInput(false);
@@ -319,6 +328,27 @@ function SessionView({
   onNext,
 }: SessionViewProps) {
   const isPerforming = flowState === 'perform' || flowState === 'countdown';
+
+  // Guard: no exercises available (all mastered or empty queue)
+  if (!currentExercise && totalExercises === 0) {
+    return (
+      <div className="bg-white rounded-xl border border-slate-200 p-8 text-center">
+        <h2 className="text-lg font-semibold text-slate-800 mb-2">No exercises available</h2>
+        <p className="text-sm text-slate-500">
+          All exercises have been mastered or none are queued for this session.
+        </p>
+      </div>
+    );
+  }
+
+  // Loading state: in preview/idle but exercise hasn't resolved yet
+  if (!currentExercise && (flowState === 'idle' || flowState === 'preview')) {
+    return (
+      <div className="bg-white rounded-xl border border-slate-200 p-8 text-center">
+        <p className="text-sm text-slate-500">Loading exercise...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">

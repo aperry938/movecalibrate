@@ -62,6 +62,7 @@ const OUTCOME_CONFIG: Record<
 
 function pointsDisplay(points: number): { label: string; color: string } {
   if (points > 0) return { label: `+${points}`, color: 'text-emerald-600' };
+  if (points === 0) return { label: '0', color: 'text-slate-500' };
   return { label: `${points}`, color: 'text-rose-600' };
 }
 

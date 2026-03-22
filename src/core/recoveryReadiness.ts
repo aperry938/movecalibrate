@@ -111,11 +111,12 @@ function computeCalibrationComponent(calibrationScore: number): number {
  *   0 days     →   0
  */
 function computeConsistencyComponent(studyStreak: number): number {
-  if (studyStreak >= 30) return 100;
-  if (studyStreak >= 21) return 85;
-  if (studyStreak >= 14) return 70;
-  if (studyStreak >= 7) return 50;
-  if (studyStreak >= 3) return 30;
-  if (studyStreak >= 1) return 10;
+  const streak = Math.max(0, studyStreak);
+  if (streak >= 30) return 100;
+  if (streak >= 21) return 85;
+  if (streak >= 14) return 70;
+  if (streak >= 7) return 50;
+  if (streak >= 3) return 30;
+  if (streak >= 1) return 10;
   return 0;
 }
