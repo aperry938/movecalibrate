@@ -1,98 +1,103 @@
-# MoveCalibrate: Adaptive Movement Rehabilitation with Confidence Calibration
+# MoveCalibrate
 
-**Anthony C. Perry** -- [github.com/aperry938](https://github.com/aperry938)
+**Adaptive Movement Rehabilitation with Confidence Calibration**
+
+[![Deploy](https://github.com/aperry938/movecalibrate/actions/workflows/deploy.yml/badge.svg)](https://github.com/aperry938/movecalibrate/actions/workflows/deploy.yml)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=white)](https://react.dev/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+
+> A client-side adaptive rehabilitation system that introduces the **Movement Calibration Gap** -- a novel metric quantifying the mismatch between patient self-assessed movement confidence and AI-measured movement quality via real-time pose estimation. Privacy-preserving by architecture: zero server, zero network, all data stays on-device.
+
+**[Live Demo](https://aperry938.github.io/movecalibrate/)** | **[Architecture](docs/ARCHITECTURE.md)** | **[Calibration Model](docs/CALIBRATION_MODEL.md)** | **[Exercise Profiles](docs/EXERCISE_PROFILES.md)**
 
 ---
 
-## Abstract
+## The Movement Calibration Gap
 
-MoveCalibrate is a client-side adaptive movement rehabilitation system that introduces the **Movement Calibration Gap** -- a novel metric comparing patient self-assessed movement confidence against AI-measured movement quality via real-time pose estimation. The system combines 30 expert-designed biomechanical features (ported from the [ZENith](https://github.com/aperry938/zenith-mvp) movement analysis framework) with a confidence calibration engine adapted from the [Meridian Labs](https://meridianlabs.us) adaptive learning platform.
+In knowledge assessment, the gap between what a learner *thinks* they know and what they *actually* know reveals critical metacognitive information. MoveCalibrate applies this to rehabilitation: the gap between a patient's *perceived* movement quality and their *measured* movement quality exposes proprioceptive miscalibration that standard movement metrics alone cannot capture.
 
-Seven rehabilitation exercises spanning upper body, lower body, and balance domains are assessed through a **4-outcome model** detecting well-calibrated proprioception (CC), movement anxiety (UC), appropriate caution (UI), and compensation patterns (CI). An adaptive 6-tier mastery system with spaced repetition schedules exercise progression, while a 4-factor Recovery Readiness composite (quality, coverage, calibration, consistency) tracks rehabilitation progress.
+The system uses a 2x2 confidence-correctness matrix producing four clinically distinct outcomes:
 
-The system runs entirely in the browser -- MediaPipe WASM for pose estimation, on-device localStorage for all data -- ensuring patient privacy by architectural design. No video or movement data ever leaves the device.
+| | Correct Movement | Incorrect Movement |
+|---|---|---|
+| **Confident** | **CC** (+3) Well-calibrated proprioception | **CI** (-5) Proprioceptive miscalibration -- dangerous |
+| **Unsure** | **UC** (-1) Movement anxiety / kinesiophobia | **UI** (-2) Appropriate caution |
+
+A patient who moves incorrectly but rates themselves as "confident" (CI) has a proprioceptive deficit that risks re-injury through compensatory patterns they cannot feel. A patient who moves correctly but rates themselves as "unsure" (UC) may have kinesiophobia that inhibits rehabilitation adherence. Each quadrant requires a different clinical response.
+
+**Theoretical grounding:** The 4-outcome model draws on metacognitive calibration research (Dunning & Kruger, 1999; Lichtenstein et al., 1982), proprioceptive awareness literature (Proske & Gandevia, 2012), kinesiophobia frameworks (Vlaeyen & Linton, 2000; Tampa Scale), and motor learning error entrenchment (Schmidt & Lee, 2020).
 
 ---
 
 ## System Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                         Browser (React 19 + Vite)                          │
-│                                                                            │
-│  ┌────────────┐    ┌───────────────────────────────────────────────────┐   │
-│  │   Camera    │    │              Core Engine Layer                    │   │
-│  │ getUserMedia│    │                                                   │   │
-│  └─────┬──────┘    │  ┌──────────────┐    ┌─────────────────────────┐ │   │
-│        │           │  │  MediaPipe    │    │  Biomechanical Feature  │ │   │
-│        ▼           │  │  WASM Pose    │───►│  Extraction (30 dim)   │ │   │
-│  Video Frames      │  │  Landmarker   │    │  Float64Array(30)      │ │   │
-│  @ 30fps           │  │  (33 lm × 4) │    └──────────┬──────────────┘ │   │
-│        │           │  └──────────────┘               │                │   │
-│        └──────────►│                                  │                │   │
-│                    │  ┌──────────────────┐    ┌───────▼──────────────┐ │   │
-│                    │  │  Confidence      │    │  Quality Scoring     │ │   │
-│                    │  │  Input           │    │  (per-feature vs     │ │   │
-│                    │  │  (patient self-  │    │   ideal ranges)      │ │   │
-│                    │  │   assessment)    │    └───────┬──────────────┘ │   │
-│                    │  └───────┬──────────┘            │                │   │
-│                    │          │                       │                │   │
-│                    │  ┌───────▼───────────────────────▼──────────────┐ │   │
-│                    │  │         4-Outcome Calibration Engine          │ │   │
-│                    │  │  CC (Confident+Correct)  UC (Unsure+Correct) │ │   │
-│                    │  │  UI (Unsure+Incorrect)   CI (Conf.+Incorrect)│ │   │
-│                    │  └───────────────────┬──────────────────────────┘ │   │
-│                    │                      │                            │   │
-│                    │  ┌───────────────────▼──────────────────────────┐ │   │
-│                    │  │           Adaptive Engine                     │ │   │
-│                    │  │  ┌─────────┐  ┌──────────┐  ┌────────────┐  │ │   │
-│                    │  │  │ Mastery │  │  Spaced   │  │  Session   │  │ │   │
-│                    │  │  │ 6-Tier  │  │ Repetition│  │  Selector  │  │ │   │
-│                    │  │  │ System  │  │ Scheduler │  │  60/30/10  │  │ │   │
-│                    │  │  └─────────┘  └──────────┘  └────────────┘  │ │   │
-│                    │  └──────────────────────────────────────────────┘ │   │
-│                    │                                                   │   │
-│                    │  ┌──────────────────────────────────────────────┐ │   │
-│                    │  │  Compensation Detection + Recovery Readiness  │ │   │
-│                    │  │  (3-consecutive resolution, 4-factor score)   │ │   │
-│                    │  └──────────────────────────────────────────────┘ │   │
-│                    └───────────────────────────────────────────────────┘   │
-│                                                                            │
-│  ┌─────────────────────────────────────────────────────────────────────┐   │
-│  │                    localStorage (mc_* keys)                          │   │
-│  │  exerciseProgress │ compensationLog │ calibrationHistory │ sessions │   │
-│  └─────────────────────────────────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────────────────────────────────┘
-                              ↑
-                    Zero server. Zero network.
-                    All data stays on-device.
+┌──────────────────────────────────────────────────────────────────────────┐
+│                      Browser (React 19 + Vite)                          │
+│                                                                         │
+│  ┌──────────┐    ┌────────────────────────────────────────────────────┐ │
+│  │  Camera   │    │              Core Engine Layer                     │ │
+│  │getUserMedia│   │                                                    │ │
+│  └────┬─────┘    │  ┌────────────┐    ┌──────────────────────────┐   │ │
+│       │          │  │ MediaPipe   │    │ Biomechanical Feature    │   │ │
+│       ▼          │  │ WASM Pose   │───►│ Extraction (30 dim)      │   │ │
+│  Video Frames    │  │ Landmarker  │    │ Float64Array(30)         │   │ │
+│  @ 30fps         │  │ (33 lm × 4)│    └───────────┬──────────────┘   │ │
+│       │          │  └────────────┘                │                   │ │
+│       └─────────►│                                 │                   │ │
+│                  │  ┌────────────────┐    ┌────────▼────────────────┐ │ │
+│                  │  │ Confidence     │    │ Quality Scoring         │ │ │
+│                  │  │ Input (patient │    │ (per-feature distance   │ │ │
+│                  │  │ self-assess.)  │    │  from ideal ranges)     │ │ │
+│                  │  └──────┬─────────┘    └────────┬───────────────┘ │ │
+│                  │         │                       │                  │ │
+│                  │  ┌──────▼───────────────────────▼───────────────┐ │ │
+│                  │  │        4-Outcome Calibration Engine           │ │ │
+│                  │  │ CC (Confident+Correct)  UC (Unsure+Correct)  │ │ │
+│                  │  │ UI (Unsure+Incorrect)   CI (Conf.+Incorrect) │ │ │
+│                  │  └──────────────────┬──────────────────────────┘  │ │
+│                  │                     │                              │ │
+│                  │  ┌──────────────────▼──────────────────────────┐  │ │
+│                  │  │          Adaptive Engine                     │  │ │
+│                  │  │  ┌─────────┐ ┌──────────┐ ┌────────────┐   │  │ │
+│                  │  │  │ Mastery │ │  Spaced   │ │  Session   │   │  │ │
+│                  │  │  │ 6-Tier  │ │Repetition │ │  Selector  │   │  │ │
+│                  │  │  │ System  │ │ Scheduler │ │  60/30/10  │   │  │ │
+│                  │  │  └─────────┘ └──────────┘ └────────────┘   │  │ │
+│                  │  └────────────────────────────────────────────┘   │ │
+│                  │                                                    │ │
+│                  │  ┌────────────────────────────────────────────┐   │ │
+│                  │  │ Compensation Detection + Recovery Readiness│   │ │
+│                  │  │ (3-consecutive resolution, 4-factor score) │   │ │
+│                  │  └────────────────────────────────────────────┘   │ │
+│                  └────────────────────────────────────────────────────┘ │
+│                                                                         │
+│  ┌──────────────────────────────────────────────────────────────────┐  │
+│  │                   localStorage (mc_* keys)                        │  │
+│  │ exerciseProgress │ compensationLog │ calibrationHistory │ sessions│  │
+│  └──────────────────────────────────────────────────────────────────┘  │
+└──────────────────────────────────────────────────────────────────────────┘
+                            ↑
+                  Zero server. Zero network.
+                  All data stays on-device.
 ```
-
----
-
-## The Movement Calibration Gap
-
-In knowledge assessment, the gap between what a student *thinks* they know and what they *actually* know reveals critical metacognitive information. MoveCalibrate applies this principle to movement rehabilitation: the gap between a patient's *perceived* movement quality and their *measured* movement quality -- the **Movement Calibration Gap** -- exposes proprioceptive miscalibration that standard movement quality metrics alone cannot capture.
-
-A patient who moves correctly but rates themselves as "unsure" (UC) may have movement anxiety that inhibits rehabilitation adherence. A patient who moves incorrectly but rates themselves as "confident" (CI) has a dangerous proprioceptive miscalibration that risks re-injury through compensatory patterns they cannot feel.
-
-This 2x2 confidence-correctness matrix produces four clinically distinct outcomes, each requiring a different therapeutic response.
 
 ---
 
 ## Exercises
 
-| # | Exercise | Category | Description | Compensations Detected |
-|---|----------|----------|-------------|----------------------|
-| 1 | Standing Shoulder Flexion | Upper | Forward arm raise to target angle | Trunk lean |
-| 2 | Standing Shoulder Abduction | Upper | Lateral arm raise to target angle | Lateral trunk lean, shoulder hiking |
-| 3 | Standing Hamstring Curl | Lower | Single-leg heel-to-buttock knee flexion | Hip flexion compensation, trunk forward lean |
-| 4 | Mini Squat | Lower | Bilateral squat to progressive depth | Excessive trunk lean, asymmetric loading, valgus collapse |
-| 5 | Tandem Stance | Balance | Heel-to-toe standing balance hold | Excessive sway, wide stance cheat, rapid corrections |
-| 6 | Single Leg Stance | Balance | Unilateral standing balance hold | Trendelenburg sign, excessive trunk sway, rapid corrections |
-| 7 | Heel Raise | Lower | Bilateral/unilateral calf raises | Asymmetric push-off, excessive wobble, knee hyperextension |
+| # | Exercise | Category | Compensations Detected |
+|---|----------|----------|----------------------|
+| 1 | Standing Shoulder Flexion | Upper | Trunk lean |
+| 2 | Standing Shoulder Abduction | Upper | Lateral trunk lean, shoulder hiking |
+| 3 | Standing Hamstring Curl | Lower | Hip flexion compensation, trunk forward lean |
+| 4 | Mini Squat | Lower | Excessive trunk lean, asymmetric loading, valgus collapse |
+| 5 | Tandem Stance | Balance | Excessive sway, wide stance cheat, rapid corrections |
+| 6 | Single Leg Stance | Balance | Trendelenburg sign, excessive trunk sway |
+| 7 | Heel Raise | Lower | Asymmetric push-off, excessive wobble, knee hyperextension |
 
-Each exercise has 4 progressive difficulty levels with exercise-specific ideal biomechanical ranges and hold durations.
+Each exercise has **4 progressive difficulty levels** with exercise-specific ideal biomechanical ranges, hold durations, and compensation detection rules. See [Exercise Profiles](docs/EXERCISE_PROFILES.md) for clinical rationale, target populations, and biomechanical details.
 
 ---
 
@@ -109,30 +114,70 @@ Ported from [ZENith](https://github.com/aperry938/zenith-mvp) with full fidelity
 
 ---
 
+## Key Algorithms
+
+### Confidence Calibration: 4-Outcome Model
+
+The 2x2 matrix of {confident, unsure} x {correct, incorrect} produces four calibration outcomes with asymmetric point values: CC (+3), UC (-1), UI (-2), CI (-5). The CI penalty is harshest because confident-incorrect movement represents dangerous proprioceptive miscalibration that actively reinforces pathological patterns.
+
+### Mastery System: 6-Tier with Spaced Repetition
+
+Six levels (New, Learning, Familiar, Comfortable, Proficient, Mastered) with spaced repetition intervals [0, 1, 3, 7, 14, 30] days. Mastery advances on correct outcomes (CC/UC: +1) and regresses on incorrect outcomes (UI: -2, CI: -3).
+
+### Session Selection: 60/30/10 Rule
+
+Each session draws from three pools: **Weak** (60%) for exercises below mastery level 2 or with unresolved compensations, **New** (30%) for unattempted exercise-difficulty combinations, and **Review** (10%) for mastered exercises. Compensation flags apply 4x (unresolved) or 2x (resolved) priority multipliers.
+
+### Recovery Readiness: 4-Factor Composite
+
+A weighted composite of movement quality (35%), exercise coverage (30%), calibration accuracy (20%), and session consistency (15%), capped at 99 -- the system never claims perfect readiness.
+
+### Compensation Detection: 3-Consecutive Resolution
+
+Compensation patterns (e.g., trunk lean, Trendelenburg sign, valgus collapse) are flagged via AND-gate rule matching and tracked until 3 consecutive correct repetitions resolve the flag. Resolved flags remain monitored at 2x priority to prevent regression.
+
+---
+
 ## Tech Stack
 
 | Component | Technology |
 |-----------|------------|
-| Pose estimation | @mediapipe/tasks-vision (WASM, browser-side) |
-| Quality scoring | @tensorflow/tfjs (VAE quality scoring -- Phase 4) |
-| Framework | React 19 + TypeScript |
-| Build | Vite 8 |
-| Styling | Tailwind CSS v4 |
+| Pose Estimation | [MediaPipe Tasks Vision](https://developers.google.com/mediapipe) (WASM, browser-side) |
+| Quality Scoring | [TensorFlow.js](https://www.tensorflow.org/js) (VAE quality model) |
+| Framework | [React 19](https://react.dev/) + [TypeScript 5.9](https://www.typescriptlang.org/) |
+| Build | [Vite 8](https://vite.dev/) |
+| Styling | [Tailwind CSS v4](https://tailwindcss.com/) |
 | Storage | localStorage (on-device only) |
-| Server | None. Zero server, zero dependencies, fully client-side |
+| Deployment | GitHub Pages (via GitHub Actions) |
+| Server | None -- fully client-side |
 
 ---
 
-## Setup
+## Getting Started
 
 ```bash
-git clone https://github.com/aperry938/movecalibrate
+git clone https://github.com/aperry938/movecalibrate.git
 cd movecalibrate
 npm install
 npm run dev
 ```
 
 Open `http://localhost:5173/movecalibrate/` in a browser with webcam access.
+
+### Requirements
+
+- Node.js 22+
+- Modern browser with WebAssembly and `getUserMedia` support (Chrome, Edge, Firefox)
+- Webcam
+
+### Available Scripts
+
+| Command | Description |
+|---------|-------------|
+| `npm run dev` | Start development server |
+| `npm run build` | Type-check and build for production |
+| `npm run lint` | Run ESLint |
+| `npm run preview` | Preview production build locally |
 
 ---
 
@@ -141,11 +186,11 @@ Open `http://localhost:5173/movecalibrate/` in a browser with webcam access.
 ```
 movecalibrate/
 ├── src/
-│   ├── core/                       # Engine layer (pure logic, no React)
-│   │   ├── types.ts                # All type definitions + FeatureIndex enum
+│   ├── core/                       # Engine layer (pure TypeScript, no React)
+│   │   ├── types.ts                # Type definitions + FeatureIndex enum
 │   │   ├── math.ts                 # Geometry primitives (ported from ZENith)
 │   │   ├── biomechanics.ts         # 30-feature extraction from 33 landmarks
-│   │   ├── exerciseProfiles.ts     # 7 exercises × 4 difficulty levels
+│   │   ├── exerciseProfiles.ts     # 7 exercises x 4 difficulty levels
 │   │   ├── qualityScoring.ts       # Per-feature quality + deviation analysis
 │   │   ├── calibrationEngine.ts    # 4-outcome model + calibration gap
 │   │   ├── masteryEngine.ts        # 6-tier mastery + spaced repetition
@@ -159,9 +204,9 @@ movecalibrate/
 │   │   └── useAdaptiveSession.ts   # Full session orchestration
 │   │
 │   ├── components/                 # React UI components
-│   │   ├── CameraView.tsx          # Webcam + skeleton overlay
-│   │   ├── SessionDashboard.tsx    # Home screen + readiness display
-│   │   ├── ExerciseGuide.tsx       # Exercise instructions + demo
+│   │   ├── CameraView.tsx          # Webcam feed + skeleton overlay
+│   │   ├── SessionDashboard.tsx    # Home screen + readiness gauge
+│   │   ├── ExerciseGuide.tsx       # Exercise instructions
 │   │   ├── ConfidenceInput.tsx     # Pre-rep confidence self-assessment
 │   │   ├── MovementFeedback.tsx    # Live quality + deviation display
 │   │   ├── CalibrationResult.tsx   # Post-rep calibration outcome
@@ -169,9 +214,13 @@ movecalibrate/
 │   │   ├── SessionReport.tsx       # End-of-session summary
 │   │   └── PhysioReport.tsx        # Exportable physiotherapist report
 │   │
+│   ├── simulation/                 # Synthetic patient trajectory generation
+│   │   ├── patientArchetypes.ts    # 3 archetypal patient profiles
+│   │   └── generateTrajectories.ts # Seeded trajectory simulation engine
+│   │
 │   ├── storage/                    # localStorage persistence layer
 │   │   ├── storageKeys.ts          # Centralized mc_* key registry
-│   │   ├── storageManager.ts       # Safe read/write wrapper
+│   │   ├── storageManager.ts       # Safe read/write with quota handling
 │   │   ├── exerciseProgress.ts     # Mastery record CRUD
 │   │   ├── compensationLog.ts      # Compensation flag CRUD
 │   │   ├── calibrationHistory.ts   # Calibration entry append/query
@@ -185,60 +234,61 @@ movecalibrate/
 │   └── main.tsx                    # React entry point
 │
 ├── docs/
-│   ├── ARCHITECTURE.md             # System design document
+│   ├── ARCHITECTURE.md             # 3-layer system design
 │   ├── CALIBRATION_MODEL.md        # Movement Calibration Gap theory
 │   └── EXERCISE_PROFILES.md        # Clinical rationale per exercise
 │
-├── public/                         # Static assets
-├── training/                       # VAE training data (Phase 4)
-├── index.html                      # HTML entry point
-├── package.json
-├── vite.config.ts
-├── tsconfig.json
-└── README.md                       # This file
+├── training/                       # VAE training pipeline
+├── .github/workflows/deploy.yml    # GitHub Pages CI/CD
+└── README.md
 ```
 
 ---
 
-## Key Algorithms
+## Privacy Architecture
 
-### Confidence Calibration: 4-Outcome Model
+MoveCalibrate processes all data on-device. This is a deliberate architectural decision, not a limitation:
 
-The 2x2 matrix of {confident, unsure} x {correct, incorrect} produces four calibration outcomes with asymmetric point values: CC (+3), UC (-1), UI (-2), CI (-5). The CI penalty is harshest because confident-incorrect movement represents dangerous proprioceptive miscalibration.
+- **Video frames** are processed by MediaPipe WASM in the browser and never transmitted
+- **Biomechanical features** are computed client-side and stored in localStorage
+- **Session history, mastery records, and calibration data** persist in `mc_*` localStorage keys
+- **No server, no API calls, no analytics, no telemetry**
 
-### Mastery System: 6-Tier with Spaced Repetition
-
-Six levels (New, Learning, Familiar, Comfortable, Proficient, Mastered) with spaced repetition intervals [0, 1, 3, 7, 14, 30] days. Mastery advances on correct outcomes (CC/UC: +1) and regresses on incorrect outcomes (UI: -2, CI: -3).
-
-### Session Selection: 60/30/10 Rule
-
-Each session draws from three pools: Weak (60%) for exercises below mastery level 2 or with unresolved compensations, New (30%) for unattempted exercise-difficulty combinations, and Review (10%) for mastered exercises. Compensation flags apply 4x (unresolved) or 2x (resolved) priority multipliers.
-
-### Recovery Readiness: 4-Factor Composite
-
-A weighted composite of movement quality (35%), exercise coverage (30%), calibration accuracy (20%), and session consistency (15%), capped at 99 (never claims perfect readiness).
-
-### Compensation Detection: 3-Consecutive Resolution
-
-Compensation patterns (e.g., trunk lean, Trendelenburg sign, valgus collapse) are flagged when detected and tracked until 3 consecutive correct repetitions resolve the flag. Resolved flags remain monitored at 2x priority to prevent regression.
+This design eliminates HIPAA/Privacy Act concerns that typically block home-based rehabilitation monitoring tools, making the system deployable without institutional data governance approval.
 
 ---
 
 ## Research Context
 
-MoveCalibrate is part of Anthony Perry's pre-PhD research portfolio, demonstrating the transfer of adaptive AI systems from education (Meridian Labs) to movement rehabilitation. The project targets **OzCHI 2026** or **JMIR Rehabilitation and Assistive Technologies** as a publication venue.
+MoveCalibrate is part of a pre-PhD research portfolio demonstrating the transfer of adaptive AI systems from education to movement rehabilitation.
 
-The core intellectual contribution -- applying metacognitive calibration metrics from learning science to proprioceptive awareness in rehabilitation -- bridges Human-Computer Interaction, kinesiology, and adaptive systems research.
+### Provenance
+
+The adaptive engine algorithms originate from [Meridian Labs](https://meridianlabs.us) -- a production platform of 25 exam preparation apps serving 55,000+ items across 4 professional domains. The 30-feature biomechanical extraction pipeline is ported from [ZENith](https://github.com/aperry938/zenith-mvp), a movement analysis research prototype.
+
+### Publication Target
+
+**OzCHI 2026** (Australasian Computer-Human Interaction Conference) or **JMIR Rehabilitation and Assistive Technologies**.
+
+### Novel Contribution
+
+The **Movement Calibration Gap** -- applying metacognitive confidence calibration from learning science to proprioceptive awareness in rehabilitation. This bridges Human-Computer Interaction, kinesiology, and adaptive systems research.
+
+### Related Publications
+
+- Perry, A.C. (2026). "Confidence-Calibrated Adaptive Learning: An Integrated Adaptive Engine for Professional Exam Preparation." *AIED 2026 Late Breaking Results.* [Zenodo](https://doi.org/10.5281/zenodo.18820462)
+- Perry, A.C. (2026). "Cross-Domain Analysis of a Confidence-Calibrated Adaptive Learning Engine." *EDM 2026 Poster/Demo.* [Zenodo](https://doi.org/10.5281/zenodo.19024683)
 
 ---
 
-## Related Work
+## Disclaimer
 
-- **[ZENith](https://github.com/aperry938/zenith-mvp)** -- Source of the 30 biomechanical features, pose-specific quality profiles, and real-time movement analysis architecture. MoveCalibrate ports ZENith's feature extraction pipeline to client-side TypeScript.
-- **[Meridian Labs](https://meridianlabs.us)** -- Source of the adaptive engine algorithms: confidence calibration 4-outcome model, 6-tier mastery with spaced repetition, 60/30/10 session selection, and compensation tracking (adapted from misconception detection). 21 production apps, 33,750+ items.
+This is a **research prototype** and is not a medical device. It does not provide medical advice, diagnosis, or treatment. Consult your healthcare provider before beginning any exercise program. Stop immediately if you experience pain or dizziness.
 
 ---
 
 ## License
 
-This project is licensed under the MIT License. See [LICENSE](LICENSE) for details.
+MIT License. See [LICENSE](LICENSE) for details.
+
+**Anthony C. Perry** -- [github.com/aperry938](https://github.com/aperry938) | [meridianlabs.us](https://meridianlabs.us)
