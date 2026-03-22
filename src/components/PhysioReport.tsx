@@ -54,6 +54,7 @@ export default function PhysioReport({ onClose }: PhysioReportProps) {
     const allSessions = getSessionHistory();
     const streak = getStreak();
 
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- mount-time data load from localStorage
     setMasteryMap(allMastery);
     setCompFlags(allComps);
     setSessions(allSessions);

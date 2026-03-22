@@ -107,6 +107,11 @@ export default function ExerciseGuide({
         </div>
       )}
 
+      {/* Safety notice */}
+      <p className="text-xs text-slate-400 mb-4 text-center">
+        Stop immediately if you experience pain or dizziness.
+      </p>
+
       {/* Begin button */}
       <button
         onClick={onBegin}

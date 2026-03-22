@@ -108,6 +108,7 @@ export default function CameraView({
     const overlay = overlayRef.current;
 
     if (!video || !canvas || !overlay) {
+      // eslint-disable-next-line react-hooks/immutability -- standard RAF self-scheduling loop
       rafRef.current = requestAnimationFrame(tick);
       return;
     }

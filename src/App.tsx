@@ -54,10 +54,8 @@ export default function App() {
 
   // Adaptive session hook
   const {
-    isActive: _sessionIsActive,
     exerciseQueue,
     currentIndex,
-    sessionMetrics: _sessionMetrics,
     startSession,
     completeRep,
     endSession,
@@ -87,6 +85,7 @@ export default function App() {
 
   // Handle frame data from camera during perform phase
   const handleFrame = useCallback(
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     (features: BiomechanicalFeatures, _landmarks: Landmark[]) => {
       if (flowState !== 'perform' || !currentExercise) return;
 
@@ -126,6 +125,7 @@ export default function App() {
         compensationsDetected: repResult.compensationsDetected,
       };
 
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- mount-time data load from repResult
       setLastRepResult(result);
 
       // Report to adaptive session

@@ -141,6 +141,7 @@ export default function SessionDashboard({ onStartSession, onViewPhysio }: Sessi
     const sessions = getSessionHistory(3);
     const streak = getStreak();
 
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- mount-time data load from localStorage
     setMasteryMap(allMastery);
     setCompFlags(allComps);
     setRecentSessions(sessions);
@@ -195,6 +196,15 @@ export default function SessionDashboard({ onStartSession, onViewPhysio }: Sessi
 
   return (
     <div className="space-y-6">
+      {/* Research Prototype Disclaimer */}
+      <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
+        <p className="text-amber-800 text-xs leading-relaxed">
+          <span className="font-semibold">Research prototype</span> — not a medical device.
+          Consult your healthcare provider before beginning any exercise program.
+          This system does not provide medical advice, diagnosis, or treatment.
+        </p>
+      </div>
+
       {/* Recovery Readiness */}
       <div className="bg-white rounded-xl border border-slate-200 p-6">
         <h2 className="text-lg font-semibold text-slate-800 mb-4">
